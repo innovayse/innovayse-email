@@ -1,0 +1,163 @@
+/*
+  Innovayse Mail — Design tokens and global styles.
+  Ported from reference.html — pixel-close fidelity required.
+*/
+
+:root {
+  --bg-base: #07080d;
+  --accent-start: #29A3E8;
+  --accent-end: #8B5CF6;
+  --accent-gradient: linear-gradient(135deg, var(--accent-start), var(--accent-end));
+  --accent-glow: rgba(41, 163, 232, 0.35);
+  --accent-glow-soft: rgba(139, 92, 246, 0.22);
+  --text-heading: #f5f6fa;
+  --text-body: #c3c7d4;
+  --text-muted: #8890a3;
+  --text-faint: #565d70;
+  --panel-border: rgba(255, 255, 255, 0.07);
+
+  /* Alternate theme support */
+  /* Swap these to retheme: teal→blue, violet→pink, cyan→teal */
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  font-family: 'Manrope', system-ui, sans-serif;
+  background: var(--bg-base);
+  overflow: hidden;
+}
+
+::selection {
+  background: rgba(139, 92, 246, 0.35);
+}
+
+/* -------- Scrollbar -------- */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* -------- Keyframe animations -------- */
+@keyframes floatA {
+  0%, 100% { transform: translate(0, 0); }
+  50%       { transform: translate(30px, -24px); }
+}
+
+@keyframes floatB {
+  0%, 100% { transform: translate(0, 0); }
+  50%       { transform: translate(-26px, 28px); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(18px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(10px) translateX(-50%); }
+  to   { opacity: 1; transform: translateY(0) translateX(-50%); }
+}
+
+@keyframes composeSlideUp {
+  from { opacity: 0; transform: translateY(100%); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* -------- Dot-grid background -------- */
+.dot-grid {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.04) 1px, transparent 0);
+  background-size: 34px 34px;
+  pointer-events: none;
+}
+
+/* -------- Ambient glow blobs -------- */
+.glow {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.glow-tl {
+  top: -180px; left: -140px;
+  width: 520px; height: 520px;
+  background: var(--accent-start);
+  opacity: 0.22;
+  filter: blur(120px);
+  animation: floatA 18s ease-in-out infinite;
+}
+
+.glow-br {
+  bottom: -200px; right: -160px;
+  width: 560px; height: 560px;
+  background: var(--accent-end);
+  opacity: 0.18;
+  filter: blur(130px);
+  animation: floatB 21s ease-in-out infinite;
+}
+
+.glow-tr1 {
+  top: -220px; right: -180px;
+  width: 640px; height: 640px;
+  background: var(--accent-end);
+  opacity: 0.16;
+  filter: blur(140px);
+  animation: floatB 24s ease-in-out infinite reverse;
+}
+
+.glow-tr2 {
+  top: 30%; right: 8%;
+  width: 360px; height: 360px;
+  background: var(--accent-start);
+  opacity: 0.09;
+  filter: blur(110px);
+  animation: floatA 20s ease-in-out infinite;
+}
+
+/* -------- Reading glow (reactive) -------- */
+.reading-glow {
+  position: absolute;
+  top: -120px; right: -120px;
+  width: 520px; height: 520px;
+  border-radius: 50%;
+  background: var(--accent-end);
+  pointer-events: none;
+  filter: blur(120px);
+  opacity: 0.12;
+  transform: scale(0.8);
+  transition: opacity .38s cubic-bezier(.22, 1, .36, 1), transform .38s cubic-bezier(.22, 1, .36, 1);
+}
+
+.reading-glow.on {
+  opacity: 0.32;
+  transform: scale(1);
+}
+
+/* -------- List panel width transition -------- */
+/* Only the list panel's width is transitioned — reading pane is flex:1 (passive) */
+.list-panel {
+  transition: width .32s cubic-bezier(.22, 1, .36, 1), border-color .2s;
+}

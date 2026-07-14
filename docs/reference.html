@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Email Client — Code Reference (plain HTML/CSS/JS, no design-tool runtime)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /*
+    Plain, framework-free reproduction of the email client design.
+    Port these exact values/classes/animations into the app's real stack.
+    Swap --accent-start / --accent-end to retheme.
+  */
+  :root {
+    --bg-base: #07080d;
+    --accent-start: #29A3E8;
+    --accent-end: #8B5CF6;
+    --accent-gradient: linear-gradient(135deg, var(--accent-start), var(--accent-end));
+    --accent-glow: rgba(41,163,232,0.35);
+    --accent-glow-soft: rgba(139,92,246,0.22);
+    --text-heading: #f5f6fa;
+    --text-body: #c3c7d4;
+    --text-muted: #8890a3;
+    --text-faint: #565d70;
+    --panel-border: rgba(255,255,255,0.07);
+  }
+  * , *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { font-family: 'Manrope', system-ui, sans-serif; background: var(--bg-base); overflow: hidden; }
+  ::selection { background: rgba(139,92,246,0.35); }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  @keyframes floatA { 0%, 100% { transform: translate(0,0); } 50% { transform: translate(30px,-24px); } }
+  @keyframes floatB { 0%, 100% { transform: translate(0,0); } 50% { transform: translate(-26px,28px); } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes modalIn { from { opacity:0; transform: translateY(18px) scale(0.97); } to { opacity:1; transform: translateY(0) scale(1); } }
+  @keyframes toastIn { from { opacity:0; transform: translateY(10px) translateX(-50%); } to { opacity:1; transform: translateY(0) translateX(-50%); } }
+  @keyframes composeSlideUp { from { opacity:0; transform: translateY(100%); } to { opacity:1; transform: translateY(0); } }
+
+  .app { position: relative; height: 100vh; width: 100%; background: var(--bg-base); overflow: hidden; display: flex; }
+  .dot-grid { position: absolute; inset: 0; background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.04) 1px, transparent 0); background-size: 34px 34px; pointer-events: none; }
+  .glow { position: absolute; border-radius: 50%; pointer-events: none; }
+  .glow-tl { top: -180px; left: -140px; width: 520px; height: 520px; background: var(--accent-start); opacity: 0.22; filter: blur(120px); animation: floatA 18s ease-in-out infinite; }
+  .glow-br { bottom: -200px; right: -160px; width: 560px; height: 560px; background: var(--accent-end); opacity: 0.18; filter: blur(130px); animation: floatB 21s ease-in-out infinite; }
+  .glow-tr1 { top: -220px; right: -180px; width: 640px; height: 640px; background: var(--accent-end); opacity: 0.16; filter: blur(140px); animation: floatB 24s ease-in-out infinite reverse; }
+  .glow-tr2 { top: 30%; right: 8%; width: 360px; height: 360px; background: var(--accent-start); opacity: 0.09; filter: blur(110px); animation: floatA 20s ease-in-out infinite; }
+
+  .app-shell { position: relative; z-index: 1; display: flex; width: 100%; height: 100%; }
+
+  /* -------- sidebar -------- */
+  .sidebar { position: relative; flex-shrink: 0; width: 224px; height: 100%; background: rgba(14,16,26,0.55); backdrop-filter: blur(24px) saturate(160%); -webkit-backdrop-filter: blur(24px) saturate(160%); border-right: 1px solid var(--panel-border); display: flex; flex-direction: column; padding: 22px 16px; overflow: hidden; }
+  #sidebar-particles { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+  .sidebar > * { position: relative; z-index: 1; }
+
+  .brand-row { display: flex; align-items: center; gap: 10px; padding: 4px 8px 20px; }
+  .brand-mark { width: 34px; height: 34px; border-radius: 10px; background: var(--accent-gradient); display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 6px 16px var(--accent-glow); }
+  .brand-name { font-size: 16.5px; font-weight: 800; color: #f3f4f8; letter-spacing: -0.01em; }
+
+  .profile-card { display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 12px; margin-bottom: 16px; }
+  .profile-avatar { width: 38px; height: 38px; border-radius: 11px; background: linear-gradient(135deg,#3B82F6,#8B5CF6); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 13px; font-weight: 700; color: white; }
+  .profile-name { font-size: 13.5px; font-weight: 700; color: #eceef4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .profile-email { font-size: 11.5px; color: #7d8496; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .compose-btn { display: flex; align-items: center; justify-content: center; gap: 8px; height: 46px; border-radius: 13px; background: var(--accent-gradient); color: white; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 10px 24px -8px var(--accent-glow); transition: transform .18s, box-shadow .18s; margin-bottom: 18px; border: none; width: 100%; font-family: inherit; }
+  .compose-btn:hover { transform: translateY(-2px); box-shadow: 0 14px 30px -8px var(--accent-glow); }
+  .compose-btn:active { transform: translateY(0); }
+
+  .nav-list { display: flex; flex-direction: column; gap: 2px; flex: 1; overflow-y: auto; overflow-x: hidden; }
+  .nav-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 11px; background: transparent; color: var(--text-muted); font-size: 13.5px; font-weight: 600; cursor: pointer; }
+  .nav-item.active { background: rgba(255,255,255,0.06); color: #f0f1f6; font-weight: 700; }
+  .nav-item-label { display: flex; align-items: center; gap: 11px; }
+  .nav-badge { font-size: 11px; font-weight: 700; color: white; background: var(--accent-gradient); border-radius: 10px; padding: 2px 8px; }
+
+  .storage { padding: 14px 10px 4px; }
+  .storage-track { height: 5px; border-radius: 4px; background: rgba(255,255,255,0.07); overflow: hidden; margin-bottom: 8px; }
+  .storage-fill { height: 100%; width: 12%; border-radius: 4px; background: var(--accent-gradient); }
+  .storage-label { font-size: 11px; color: #5f6579; }
+
+  /* -------- main column -------- */
+  .main-col { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100%; }
+  .reading-glow { position: absolute; top: -120px; right: -120px; width: 520px; height: 520px; border-radius: 50%; background: var(--accent-end); pointer-events: none; filter: blur(120px); opacity: 0.12; transform: scale(0.8); transition: opacity .38s cubic-bezier(.22,1,.36,1), transform .38s cubic-bezier(.22,1,.36,1); }
+  .reading-glow.on { opacity: 0.32; transform: scale(1); }
+
+  .topbar { flex-shrink: 0; height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; background: rgba(12,14,22,0.4); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255,255,255,0.06); position: relative; z-index: 1; }
+  .topbar-date { display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 12.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+  .topbar-icons { display: flex; align-items: center; gap: 6px; }
+  .icon-btn { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); cursor: pointer; }
+  .icon-btn:hover { background: rgba(255,255,255,0.06); color: #e6e8f0; }
+  .icon-btn.accent { background: var(--accent-gradient); color: white; box-shadow: 0 4px 14px var(--accent-glow); }
+  .icon-btn.accent:hover { background: var(--accent-gradient); color: white; }
+
+  .main-row { flex: 1; min-height: 0; display: flex; position: relative; z-index: 1; }
+
+  /* list panel width is the only thing that transitions — reading pane is flex:1
+     and resizes smoothly every frame as the sibling's width animates. */
+  .list-panel { width: 340px; min-width: 0; max-width: 100%; flex: 0 0 auto; display: flex; flex-direction: column; overflow: hidden; border-right: 1px solid rgba(255,255,255,0.06); transition: width .32s cubic-bezier(.22,1,.36,1), border-color .2s; }
+  .list-panel.full { width: 100%; border-right-color: transparent; }
+
+  .list-header { flex-shrink: 0; padding: 18px 20px 14px; }
+  .list-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .list-title { font-size: 20px; font-weight: 800; color: var(--text-heading); letter-spacing: -0.01em; }
+  .search-wrap { position: relative; }
+  .search-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: #5a6178; }
+  .search-input { width: 100%; height: 38px; padding: 0 14px 0 38px; border-radius: 10px; background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.08); color: #eceef4; font-size: 13.5px; font-family: inherit; outline: none; }
+  .search-input:focus { border-color: var(--accent-start); box-shadow: 0 0 0 3px var(--accent-glow-soft); }
+
+  .list-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 0 10px 14px; }
+  .email-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 10px; border-radius: 13px; cursor: pointer; margin-bottom: 2px; border: 1px solid transparent; }
+  .email-row.selected { background: rgba(41,163,232,0.12); border-color: rgba(41,163,232,0.3); }
+  .email-avatar { width: 38px; height: 38px; border-radius: 11px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12.5px; font-weight: 700; color: white; }
+  .email-main { flex: 1; min-width: 0; }
+  .email-top-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 3px; }
+  .email-sender { font-size: 13.5px; color: #c3c7d4; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .email-sender.unread { color: #f0f1f6; font-weight: 700; }
+  .email-time { font-size: 11.5px; color: #5f6579; flex-shrink: 0; }
+  .email-subject { font-size: 13px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 2px; }
+  .email-subject.unread { color: #d7dae2; font-weight: 600; }
+  .email-preview { font-size: 12.5px; color: #6b7386; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .unread-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-start); flex-shrink: 0; margin-top: 5px; box-shadow: 0 0 8px var(--accent-start); }
+
+  .empty-folder, .empty-pane { display: flex; flex-direction: column; align-items: center; text-align: center; color: var(--text-faint); }
+  .empty-folder { padding: 60px 20px; }
+  .empty-pane { flex: 1; justify-content: center; }
+  .empty-pane-icon { width: 64px; height: 64px; border-radius: 50%; background: rgba(255,255,255,0.04); display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+
+  .reading-pane { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+  .reading-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 28px 32px; animation: fadeIn .3s ease both; }
+  .back-link { display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 18px; width: fit-content; }
+  .back-link:hover { color: #e6e8f0; }
+  .reading-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+  .reading-subject { font-size: 21px; font-weight: 800; color: var(--text-heading); letter-spacing: -0.01em; line-height: 1.3; min-width: 0; }
+  .reading-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+  .reading-actions .icon-btn.danger:hover { color: #f36565; }
+  .reading-meta { display: flex; align-items: center; gap: 12px; padding-bottom: 24px; margin-bottom: 24px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+  .reading-avatar { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px; font-weight: 700; color: white; }
+  .reading-sender { font-size: 14.5px; font-weight: 700; color: #eceef4; }
+  .reading-email { font-size: 12.5px; color: var(--text-muted); }
+  .reading-time { font-size: 12.5px; color: #6b7386; flex-shrink: 0; }
+  .reading-body { font-size: 15px; line-height: 1.75; color: var(--text-body); max-width: 640px; }
+  .reading-body p { margin: 0 0 16px; }
+
+  /* -------- compose modal -------- */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(4,5,10,0.65); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: none; align-items: center; justify-content: center; z-index: 50; animation: fadeIn .2s ease both; }
+  .modal-overlay.open { display: flex; }
+  .modal-wrap { position: relative; width: 640px; max-width: 92vw; max-height: 86vh; }
+  .modal-ambient-glow { position: absolute; top: -40px; left: 50%; transform: translateX(-50%); width: 400px; height: 200px; border-radius: 50%; background: var(--accent-start); opacity: 0.28; filter: blur(80px); pointer-events: none; }
+  .modal-card { position: relative; display: flex; flex-direction: column; max-height: 86vh; background: rgba(19,22,35,0.85); backdrop-filter: blur(30px) saturate(160%); -webkit-backdrop-filter: blur(30px) saturate(160%); border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; box-shadow: 0 40px 90px -20px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.02) inset; overflow: hidden; animation: modalIn .35s cubic-bezier(.22,1,.36,1) both; }
+  .modal-header { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 20px 22px 16px; }
+  .modal-title-row { display: flex; align-items: center; gap: 11px; }
+  .modal-badge { width: 32px; height: 32px; border-radius: 10px; background: var(--accent-gradient); display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 6px 16px var(--accent-glow); }
+  .modal-title { font-size: 15.5px; font-weight: 700; color: #f0f1f6; }
+
+  .modal-fields { flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; padding: 0 22px 18px; }
+  .modal-field { display: flex; align-items: center; gap: 10px; height: 44px; border-radius: 12px; background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.08); padding: 0 14px; }
+  .modal-field:focus-within { border-color: var(--accent-start); box-shadow: 0 0 0 3px var(--accent-glow-soft); }
+  .modal-field input { flex: 1; border: none; background: transparent; color: #eceef4; font-size: 13.5px; font-family: inherit; outline: none; }
+  .modal-field input.subject-input { font-weight: 600; }
+
+  .modal-toolbar { flex-shrink: 0; display: flex; align-items: center; gap: 2px; margin: 0 22px 14px; padding: 6px; border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); width: fit-content; }
+  .modal-toolbar .icon-btn { width: 30px; height: 30px; border-radius: 8px; }
+  .toolbar-divider { width: 1px; height: 16px; background: rgba(255,255,255,0.1); margin: 0 5px; }
+
+  .modal-body { flex: 1; min-height: 170px; resize: none; border: none; background: transparent; color: #d7dae2; font-size: 14px; font-family: inherit; line-height: 1.7; outline: none; padding: 0 22px 18px; width: 100%; }
+
+  .modal-footer { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 16px 22px; background: rgba(255,255,255,0.02); border-top: 1px solid rgba(255,255,255,0.06); }
+  .footer-actions { display: flex; align-items: center; gap: 10px; }
+  .btn-outline { height: 40px; padding: 0 18px; border-radius: 11px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); color: #e6e8f0; font-size: 13.5px; font-weight: 700; display: flex; align-items: center; cursor: pointer; font-family: inherit; }
+  .btn-outline:hover { background: rgba(255,255,255,0.08); }
+  .btn-send { height: 40px; padding: 0 22px; border-radius: 11px; background: var(--accent-gradient); color: white; font-size: 13.5px; font-weight: 700; display: flex; align-items: center; gap: 8px; cursor: pointer; box-shadow: 0 10px 24px -8px var(--accent-glow); transition: transform .18s; border: none; font-family: inherit; }
+  .btn-send:hover { transform: translateY(-2px); }
+  .btn-send:active { transform: translateY(0); }
+
+  /* -------- compose windows (Gmail-style, docked bottom-right, stackable) -------- */
+  .compose-window { position: fixed; bottom: 0; width: 320px; display: flex; flex-direction: column; background: rgba(19,22,35,0.92); backdrop-filter: blur(26px) saturate(160%); -webkit-backdrop-filter: blur(26px) saturate(160%); border: 1px solid rgba(255,255,255,0.1); border-top-left-radius: 14px; border-top-right-radius: 14px; box-shadow: 0 -20px 60px -20px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.02) inset; overflow: hidden; transition: height .22s cubic-bezier(.22,1,.36,1); animation: composeSlideUp .3s cubic-bezier(.22,1,.36,1) both; }
+  .compose-window.expanded { height: 440px; }
+  .compose-window.minimized { height: 44px; }
+  .compose-header { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: rgba(255,255,255,0.03); cursor: pointer; }
+  .compose-window.expanded .compose-header { border-bottom: 1px solid rgba(255,255,255,0.07); }
+  .compose-header-left { display: flex; align-items: center; gap: 9px; min-width: 0; }
+  .compose-badge { width: 22px; height: 22px; border-radius: 7px; background: var(--accent-gradient); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .compose-title { font-size: 13px; font-weight: 700; color: #f0f1f6; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .compose-header-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+  .compose-icon-btn { width: 26px; height: 26px; border-radius: 7px; display: flex; align-items: center; justify-content: center; color: #8890a3; cursor: pointer; }
+  .compose-icon-btn:hover { background: rgba(255,255,255,0.08); color: #e6e8f0; }
+  .compose-icon-btn.danger:hover { color: #f36565; }
+  .compose-body { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+  .compose-window.minimized .compose-body { display: none; }
+  .compose-fields { flex-shrink: 0; display: flex; flex-direction: column; padding: 0 16px; }
+  .compose-field-row { display: flex; align-items: center; gap: 9px; height: 38px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .compose-field-row .field-prefix { font-size: 12.5px; color: #7d8496; flex-shrink: 0; }
+  .compose-field-row input { flex: 1; border: none; background: transparent; color: #eceef4; font-size: 13px; font-family: inherit; outline: none; }
+  .compose-field-row input.subject { font-weight: 600; }
+  .compose-textarea { flex: 1; min-height: 120px; resize: none; border: none; background: transparent; color: #d7dae2; font-size: 13.5px; font-family: inherit; line-height: 1.7; outline: none; padding: 14px 16px; width: 100%; }
+  .compose-toolbar { flex-shrink: 0; display: flex; align-items: center; gap: 2px; margin: 0 16px 10px; padding: 5px; border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); width: fit-content; }
+  .compose-toolbar .compose-icon-btn svg { width: 12px; height: 12px; }
+  .compose-toolbar-divider { width: 1px; height: 14px; background: rgba(255,255,255,0.1); margin: 0 4px; }
+  .compose-footer { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: rgba(255,255,255,0.02); border-top: 1px solid rgba(255,255,255,0.06); }
+  .compose-send-btn { height: 34px; padding: 0 18px; border-radius: 9px; background: var(--accent-gradient); color: white; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 7px; cursor: pointer; box-shadow: 0 8px 20px -8px var(--accent-glow); transition: transform .18s; border: none; font-family: inherit; }
+  .compose-send-btn:hover { transform: translateY(-2px); }
+  .compose-send-btn:active { transform: translateY(0); }
+
+
+  .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); background: rgba(20,23,36,0.92); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.1); color: #eceef4; font-size: 13.5px; font-weight: 600; padding: 12px 20px; border-radius: 12px; box-shadow: 0 20px 50px -12px rgba(0,0,0,0.6); z-index: 60; display: none; align-items: center; gap: 10px; animation: toastIn .25s ease both; }
+  .toast.show { display: flex; }
+  .toast-icon { width: 20px; height: 20px; border-radius: 50%; background: var(--accent-gradient); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="dot-grid"></div>
+  <div class="glow glow-tl"></div>
+  <div class="glow glow-br"></div>
+  <div class="glow glow-tr1"></div>
+  <div class="glow glow-tr2"></div>
+
+  <div class="app-shell">
+
+    <!-- ============ SIDEBAR ============ -->
+    <div class="sidebar">
+      <canvas id="sidebar-particles"></canvas>
+
+      <div class="brand-row">
+        <div class="brand-mark">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" fill="white" fill-opacity="0.95"/></svg>
+        </div>
+        <div class="brand-name">Innovayse Mail</div>
+      </div>
+
+      <div class="profile-card">
+        <div class="profile-avatar">TU</div>
+        <div style="min-width:0;flex:1;">
+          <div class="profile-name">Test User</div>
+          <div class="profile-email">test@innovayse.com</div>
+        </div>
+        <div class="icon-btn" style="padding:4px;width:auto;height:auto;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="2.8" stroke="currentColor" stroke-width="1.7"/><path d="M19.4 13.5c.1-.5.1-1 0-1.5l1.9-1.5-2-3.4-2.3.7c-.4-.3-.8-.6-1.3-.8L15.3 4h-4l-.4 2.9c-.5.2-.9.5-1.3.8l-2.3-.7-2 3.4L7.2 12c-.1.5-.1 1 0 1.5l-1.9 1.5 2 3.4 2.3-.7c.4.3.8.6 1.3.8l.4 3h4l.4-2.9c.5-.2.9-.5 1.3-.8l2.3.7 2-3.4-1.9-1.6Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+        </div>
+      </div>
+
+      <button class="compose-btn" onclick="openCompose()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="white" stroke-width="2.2" stroke-linecap="round"/></svg>
+        Compose
+      </button>
+
+      <div class="nav-list" id="nav-list">
+        <!-- populated by JS: renderNav() -->
+      </div>
+
+      <div class="storage">
+        <div class="storage-track"><div class="storage-fill"></div></div>
+        <div class="storage-label">240 MB of 2 GB used</div>
+      </div>
+    </div>
+
+    <!-- ============ MAIN COLUMN ============ -->
+    <div class="main-col">
+      <div class="reading-glow" id="reading-glow"></div>
+
+      <div class="topbar">
+        <div class="topbar-date"><span>Wednesday</span><span style="color:#4a4f5e;">·</span><span>July 8, 2026</span></div>
+        <div class="topbar-icons">
+          <div class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="4.5" width="18" height="16" rx="3" stroke="currentColor" stroke-width="1.6"/><path d="M3 9.5h18M8 3v3M16 3v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+          <div class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M3.5 20c.7-3.6 3-5.5 5.5-5.5s4.8 1.9 5.5 5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="17.5" cy="9" r="2.2" stroke="currentColor" stroke-width="1.5"/><path d="M15 20c.4-2.3 1.6-3.8 3-4.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+          <div class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="2.8" stroke="currentColor" stroke-width="1.6"/><path d="M19.4 13.5c.1-.5.1-1 0-1.5l1.9-1.5-2-3.4-2.3.7c-.4-.3-.8-.6-1.3-.8L15.3 4h-4l-.4 2.9c-.5.2-.9.5-1.3.8l-2.3-.7-2 3.4L7.2 12c-.1.5-.1 1 0 1.5l-1.9 1.5 2 3.4 2.3-.7c.4.3.8.6 1.3.8l.4 3h4l.4-2.9c.5-.2.9-.5 1.3-.8l2.3.7 2-3.4-1.9-1.6Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg></div>
+          <div class="icon-btn accent"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="white" stroke-width="1.6"/><path d="M12 8v5l3 2" stroke="white" stroke-width="1.6" stroke-linecap="round"/></svg></div>
+        </div>
+      </div>
+
+      <div class="main-row">
+        <!-- ============ MESSAGE LIST ============ -->
+        <div class="list-panel" id="list-panel">
+          <div class="list-header">
+            <div class="list-header-row">
+              <div class="list-title" id="folder-label">Inbox</div>
+              <div style="display:flex;align-items:center;gap:4px;">
+                <div class="icon-btn" style="width:30px;height:30px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+                <div class="icon-btn" style="width:30px;height:30px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M4 4v6h6M20 20v-6h-6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 14a8 8 0 0 0 14.5 3M19 10A8 8 0 0 0 4.5 7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+              </div>
+            </div>
+            <div class="search-wrap">
+              <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              <input class="search-input" type="text" placeholder="Search mail">
+            </div>
+          </div>
+          <div class="list-scroll" id="list-scroll">
+            <!-- populated by JS: renderList() -->
+          </div>
+        </div>
+
+        <!-- ============ READING PANE ============ -->
+        <div class="reading-pane" id="reading-pane">
+          <!-- populated by JS: renderReadingPane() -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ COMPOSE WINDOWS (Gmail-style, stackable) ============ -->
+  <div id="compose-windows-container"></div>
+
+  <div class="toast" id="toast">
+    <div class="toast-icon"><svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M4 12.5L9.5 18L20 6" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <span id="toast-message"></span>
+  </div>
+</div>
+
+<script>
+  // ================== DATA ==================
+  const FOLDERS = [
+    { key: 'inbox', label: 'Inbox', icon: '<path d="M3 8.5L12 13.5L21 8.5" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><rect x="3" y="5.5" width="18" height="13" rx="3" stroke="currentColor" stroke-width="1.7"/>' },
+    { key: 'drafts', label: 'Drafts', icon: '<path d="M4 20l1.2-4.2L16.4 4.6a1.5 1.5 0 0 1 2.1 0l1 1a1.5 1.5 0 0 1 0 2.1L8.2 18.8 4 20Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' },
+    { key: 'sent', label: 'Sent', icon: '<path d="M3 11L20 4L13 21L11 13L3 11Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' },
+    { key: 'archive', label: 'Archive', icon: '<rect x="3" y="5" width="18" height="4.5" rx="1.4" stroke="currentColor" stroke-width="1.6"/><path d="M4.5 9.5V17a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V9.5" stroke="currentColor" stroke-width="1.6"/><path d="M10 13.2h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
+    { key: 'junk', label: 'Junk', icon: '<path d="M12 3C7 3 3 7 3 12C3 15 4.5 17.6 7 19.1L12 14L17 19.1C19.5 17.6 21 15 21 12C21 7 17 3 12 3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 21h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
+    { key: 'templates', label: 'Templates', icon: '<rect x="5" y="3.5" width="12" height="15" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M8 8h6M8 11.5h6M8 15h3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' },
+    { key: 'trash', label: 'Trash', icon: '<path d="M4 7h16M9.5 7V5a1.5 1.5 0 0 1 1.5-1.5h2A1.5 1.5 0 0 1 14.5 5v2M6 7l1 12.5A2 2 0 0 0 9 21.3h6a2 2 0 0 0 2-1.8L18 7" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' },
+  ];
+
+  let emails = [
+    { id: 1, folder: 'inbox', sender: 'Priya Shah', initials: 'PS', senderEmail: 'priya.shah@innovayse.com', subject: 'Q3 roadmap review — your input needed', preview: "Hey team, before we lock the roadmap I wanted to get your eyes on the auth & billing workstreams.", time: '10:42 AM', unread: true, gradient: 'linear-gradient(135deg,#29A3E8,#8B5CF6)', body: [
+      "Hey team, before we lock the roadmap I wanted to get your eyes on the auth and billing workstreams — both are trending a sprint behind where we'd hoped.",
+      "Specifically I'd love thoughts on whether we push the SSO work to Q4 in favor of shipping the new billing portal first. Reply here or let's grab 15 minutes tomorrow.",
+      "Thanks — Priya"
+    ]},
+    { id: 2, folder: 'inbox', sender: 'Stripe', initials: 'ST', senderEmail: 'invoices@stripe.com', subject: 'Your invoice #4821 is ready', preview: 'Your April statement for Innovayse Inc. is now available to view and download.', time: '9:15 AM', unread: true, gradient: 'linear-gradient(135deg,#635BFF,#8B5CF6)', body: [
+      "Your April statement for Innovayse Inc. is now available.",
+      "Amount due: $1,240.00 — payment will be automatically collected from your card on file on July 12, 2026.",
+      "View and download the full invoice from your Stripe dashboard."
+    ]},
+    { id: 3, folder: 'inbox', sender: 'Marcus Webb', initials: 'MW', senderEmail: 'marcus@innovayse.com', subject: 'Re: Design review notes', preview: 'Looks great overall — just a couple of tweaks on the empty states and then I think we ship it.', time: 'Yesterday', unread: false, gradient: 'linear-gradient(135deg,#22D3C9,#3B82F6)', body: [
+      "Looks great overall — just a couple of tweaks on the empty states and then I think we ship it.",
+      "Left comments on the Figma file. Mainly around spacing in the reading pane and the compose modal's toolbar icons.",
+      "Otherwise this is a big step up from the old UI. Nice work."
+    ]},
+    { id: 4, folder: 'inbox', sender: 'Linear', initials: 'LI', senderEmail: 'notify@linear.app', subject: '3 issues assigned to you', preview: 'INV-204 Update auth flow copy, INV-207 Fix mobile nav overlap, INV-211 Add dark mode toggle.', time: 'Yesterday', unread: false, gradient: 'linear-gradient(135deg,#5B5FEF,#8B5CF6)', body: [
+      "3 issues were assigned to you in the Webapp project:",
+      "INV-204 — Update auth flow copy. INV-207 — Fix mobile nav overlap. INV-211 — Add dark mode toggle to account settings.",
+      "Open Linear to triage and set estimates."
+    ]},
+    { id: 5, folder: 'inbox', sender: 'Security', initials: 'SE', senderEmail: 'security@innovayse.com', subject: 'New sign-in from Chrome on macOS', preview: 'We noticed a new login to your account from San Francisco, CA. Was this you?', time: 'Monday', unread: false, gradient: 'linear-gradient(135deg,#EF4444,#8B5CF6)', body: [
+      "We noticed a new sign-in to your Innovayse account.",
+      "Device: Chrome on macOS · Location: San Francisco, CA · Time: Monday, 8:14 AM.",
+      "If this was you, no action is needed. If you don't recognize this activity, secure your account immediately."
+    ]},
+    { id: 6, folder: 'inbox', sender: 'Ada Lovelace', initials: 'AL', senderEmail: 'ada@innovayse.com', subject: 'Welcome aboard', preview: "So excited to have you join the team — let's grab 15 minutes this week to get you set up.", time: 'Monday', unread: true, gradient: 'linear-gradient(135deg,#EC4899,#8B5CF6)', body: [
+      "So excited to have you join the team!",
+      "Let's grab 15 minutes this week so I can walk you through the workspace and get your accounts provisioned.",
+      "Welcome aboard — Ada"
+    ]},
+    { id: 7, folder: 'inbox', sender: 'GitHub', initials: 'GH', senderEmail: 'notifications@github.com', subject: '[innovayse/webapp] PR #582 merged', preview: 'feat: interactive particle background — merged into main by marcuswebb.', time: 'Last week', unread: false, gradient: 'linear-gradient(135deg,#24292e,#57606a)', body: [
+      "PR #582 \"feat: interactive particle background\" was merged into main by marcuswebb.",
+      "3 files changed, 214 additions, 12 deletions.",
+      "View the full diff and commit history on GitHub."
+    ]},
+    { id: 8, folder: 'inbox', sender: 'Sofia Martins', initials: 'SM', senderEmail: 'sofia@innovayse.com', subject: 'Client feedback — Meridian account', preview: 'They loved the new dashboard, just asked about export to CSV. Full notes attached.', time: 'Last week', unread: false, gradient: 'linear-gradient(135deg,#29A3E8,#22D3C9)', body: [
+      "Quick recap from today's call with Meridian:",
+      "They loved the new dashboard and the onboarding flow. Their only ask was CSV export for the reports table.",
+      "Full notes are in the shared doc if you want the details."
+    ]},
+    { id: 9, folder: 'drafts', sender: 'You', initials: 'YO', senderEmail: 'test@innovayse.com', subject: 'Follow up: pricing question', preview: 'Hi Daniel, thanks for reaching out — happy to walk through the plans...', time: 'Yesterday', unread: false, gradient: 'linear-gradient(135deg,#6b7280,#3B82F6)', body: ["Hi Daniel, thanks for reaching out — happy to walk through the plans and see what fits best.", "(draft — not yet sent)"] },
+    { id: 10, folder: 'drafts', sender: 'You', initials: 'YO', senderEmail: 'test@innovayse.com', subject: '(no subject)', preview: 'Draft started — empty', time: '3 days ago', unread: false, gradient: 'linear-gradient(135deg,#6b7280,#8B5CF6)', body: ["(empty draft)"] },
+    { id: 11, folder: 'sent', sender: 'Priya Shah', initials: 'PS', senderEmail: 'priya.shah@innovayse.com', subject: 'Re: Q3 roadmap review', preview: "Sounds good, I'll have comments by EOD.", time: '2 days ago', unread: false, gradient: 'linear-gradient(135deg,#29A3E8,#8B5CF6)', body: ["Sounds good, I'll have comments by end of day.", "Sent from Innovayse Mail"] },
+    { id: 12, folder: 'sent', sender: 'Design Team', initials: 'DT', senderEmail: 'design@innovayse.com', subject: 'Onboarding deck', preview: 'Attached the updated slides for tomorrow.', time: '5 days ago', unread: false, gradient: 'linear-gradient(135deg,#22D3C9,#3B82F6)', body: ["Attached the updated slides for tomorrow's onboarding session."] },
+    { id: 13, folder: 'archive', sender: 'Notion', initials: 'NO', senderEmail: 'team@notion.so', subject: 'Your workspace export is ready', preview: 'The export you requested for Innovayse Workspace is ready to download.', time: '2 weeks ago', unread: false, gradient: 'linear-gradient(135deg,#37352F,#8B5CF6)', body: ["The export you requested is ready to download."] },
+    { id: 14, folder: 'junk', sender: 'Promo Deals', initials: 'PD', senderEmail: 'noreply@promo-deals.biz', subject: 'You won a free prize!!', preview: 'Click here to claim your reward before it expires...', time: '1 month ago', unread: false, gradient: 'linear-gradient(135deg,#6b7280,#4b5563)', body: ["Click here to claim your reward before it expires."] },
+    { id: 15, folder: 'templates', sender: 'Support Team', initials: 'ST', senderEmail: 'support@innovayse.com', subject: 'Template: Onboarding welcome', preview: 'Hi {{name}}, welcome to Innovayse! Here is how to get started...', time: '—', unread: false, gradient: 'linear-gradient(135deg,#8B5CF6,#EC4899)', body: ["Hi {{name}}, welcome to Innovayse! Here's how to get started..."] },
+  ];
+
+  // ================== STATE ==================
+  let state = { folder: 'inbox', selectedId: null };
+
+  // ================== RENDER: NAV ==================
+  function renderNav() {
+    const nav = document.getElementById('nav-list');
+    nav.innerHTML = FOLDERS.map(f => {
+      const active = f.key === state.folder;
+      const unreadCount = f.key === 'inbox' ? emails.filter(e => e.folder === 'inbox' && e.unread).length : 0;
+      return `
+        <div class="nav-item ${active ? 'active' : ''}" onclick="selectFolder('${f.key}')">
+          <div class="nav-item-label">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">${f.icon}</svg>
+            <span>${f.label}</span>
+          </div>
+          ${unreadCount > 0 ? `<span class="nav-badge">${unreadCount}</span>` : ''}
+        </div>`;
+    }).join('');
+  }
+
+  // ================== RENDER: LIST ==================
+  function renderList() {
+    document.getElementById('folder-label').textContent = FOLDERS.find(f => f.key === state.folder).label;
+    const rows = emails.filter(e => e.folder === state.folder);
+    const scroll = document.getElementById('list-scroll');
+
+    if (rows.length === 0) {
+      scroll.innerHTML = `
+        <div class="empty-folder">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" style="margin-bottom:12px;opacity:0.6;"><rect x="3" y="5.5" width="18" height="13" rx="3" stroke="currentColor" stroke-width="1.6"/><path d="M3 8.5L12 13.5L21 8.5" stroke="currentColor" stroke-width="1.6"/></svg>
+          <div style="font-size:13.5px;">This folder is empty</div>
+        </div>`;
+      return;
+    }
+
+    scroll.innerHTML = rows.map(e => `
+      <div class="email-row ${e.id === state.selectedId ? 'selected' : ''}" onclick="selectEmail(${e.id})">
+        <div class="email-avatar" style="background:${e.gradient};">${e.initials}</div>
+        <div class="email-main">
+          <div class="email-top-row">
+            <span class="email-sender ${e.unread ? 'unread' : ''}">${e.sender}</span>
+            <span class="email-time">${e.time}</span>
+          </div>
+          <div class="email-subject ${e.unread ? 'unread' : ''}">${e.subject}</div>
+          <div class="email-preview">${e.preview}</div>
+        </div>
+        ${e.unread ? '<div class="unread-dot"></div>' : ''}
+      </div>
+    `).join('');
+  }
+
+  // ================== RENDER: READING PANE ==================
+  function renderReadingPane() {
+    const pane = document.getElementById('reading-pane');
+    const email = emails.find(e => e.id === state.selectedId && e.folder === state.folder);
+
+    if (!email) {
+      pane.innerHTML = `
+        <div class="empty-pane">
+          <div class="empty-pane-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" style="color:#565d70;"><rect x="3" y="5.5" width="18" height="13" rx="3" stroke="currentColor" stroke-width="1.6"/><path d="M3 8.5L12 13.5L21 8.5" stroke="currentColor" stroke-width="1.6"/></svg>
+          </div>
+          <div style="font-size:14.5px;color:#565d70;">Select a message to read</div>
+        </div>`;
+      return;
+    }
+
+    pane.innerHTML = `
+      <div class="reading-scroll">
+        <div class="back-link" onclick="closeReading()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M19 12H5M5 12L11 6M5 12L11 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Back to inbox
+        </div>
+        <div class="reading-header">
+          <div class="reading-subject">${email.subject}</div>
+          <div class="reading-actions">
+            <div class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9 6L3 12L9 18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 12h11a5 5 0 0 1 5 5v1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+            <div class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15 6l6 6-6 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12H10a5 5 0 0 0-5 5v1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+            <div class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="4.5" rx="1.4" stroke="currentColor" stroke-width="1.6"/><path d="M4.5 9.5V17a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V9.5" stroke="currentColor" stroke-width="1.6"/></svg></div>
+            <div class="icon-btn danger"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9.5 7V5a1.5 1.5 0 0 1 1.5-1.5h2A1.5 1.5 0 0 1 14.5 5v2M6 7l1 12.5A2 2 0 0 0 9 21.3h6a2 2 0 0 0 2-1.8L18 7" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
+          </div>
+        </div>
+        <div class="reading-meta">
+          <div class="reading-avatar" style="background:${email.gradient};">${email.initials}</div>
+          <div style="flex:1;min-width:0;">
+            <div class="reading-sender">${email.sender}</div>
+            <div class="reading-email">${email.senderEmail}</div>
+          </div>
+          <div class="reading-time">${email.time}</div>
+        </div>
+        <div class="reading-body">
+          ${email.body.map(p => `<p>${p}</p>`).join('')}
+        </div>
+      </div>`;
+  }
+
+  // ================== RENDER: LIST-PANEL WIDTH / GLOW ==================
+  function renderLayout() {
+    const hasSelection = !!emails.find(e => e.id === state.selectedId && e.folder === state.folder);
+    document.getElementById('list-panel').classList.toggle('full', !hasSelection);
+    document.getElementById('reading-glow').classList.toggle('on', hasSelection);
+  }
+
+  function renderAll() {
+    renderNav();
+    renderList();
+    renderReadingPane();
+    renderLayout();
+  }
+
+  // ================== ACTIONS ==================
+  function selectFolder(key) {
+    state.folder = key;
+    state.selectedId = null; // collapses reading pane, list goes full width — Gmail style
+    renderAll();
+  }
+
+  function selectEmail(id) {
+    const e = emails.find(x => x.id === id);
+    if (e) e.unread = false;
+    state.selectedId = id;
+    renderAll();
+  }
+
+  function closeReading() {
+    state.selectedId = null;
+    renderAll();
+  }
+
+  // ================== COMPOSE WINDOWS (Gmail-style, docked bottom-right, stackable) ==================
+  let composeWindows = []; // { id, minimized, subject }
+  let nextComposeId = 1;
+
+  function renderComposeWindows() {
+    const container = document.getElementById('compose-windows-container');
+    container.innerHTML = composeWindows.map((w, idx) => {
+      const rightFromEnd = composeWindows.length - 1 - idx;
+      const right = 24 + rightFromEnd * 336; // 320px window + 16px gap
+      const titleText = w.subject && w.subject.trim() ? w.subject : 'New message';
+      return `
+        <div class="compose-window ${w.minimized ? 'minimized' : 'expanded'}" style="right:${right}px;z-index:${50 + idx};">
+          <div class="compose-header" onclick="toggleMinimizeCompose(${w.id})">
+            <div class="compose-header-left">
+              <div class="compose-badge">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M4 20l1.2-4.2L16.4 4.6a1.5 1.5 0 0 1 2.1 0l1 1a1.5 1.5 0 0 1 0 2.1L8.2 18.8 4 20Z" stroke="white" stroke-width="1.8" stroke-linejoin="round"/></svg>
+              </div>
+              <div class="compose-title">${titleText}</div>
+            </div>
+            <div class="compose-header-actions">
+              <div class="compose-icon-btn" onclick="event.stopPropagation(); toggleMinimizeCompose(${w.id})">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              </div>
+              <div class="compose-icon-btn danger" onclick="event.stopPropagation(); closeComposeWindow(${w.id})">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              </div>
+            </div>
+          </div>
+
+          <div class="compose-body">
+            <div class="compose-fields">
+              <div class="compose-field-row">
+                <span class="field-prefix">To</span>
+                <input type="text">
+              </div>
+              <div class="compose-field-row">
+                <input type="text" class="subject" placeholder="Subject" oninput="setComposeSubject(${w.id}, this.value)">
+              </div>
+            </div>
+
+            <textarea class="compose-textarea" placeholder="Write your message..."></textarea>
+
+            <div class="compose-toolbar">
+              <div class="compose-icon-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M6 4h7a3.5 3.5 0 0 1 0 7H6zM6 11h8a3.5 3.5 0 0 1 0 7H6z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div>
+              <div class="compose-icon-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M10 5h7M8 19h7M13 5l-4 14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+              <div class="compose-icon-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M6 19h12M9 19V6.5a3 3 0 0 1 6 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+              <div class="compose-toolbar-divider"></div>
+              <div class="compose-icon-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M8 12.5l6.5-6.5a3 3 0 0 1 4.2 4.2L10 18.9a5 5 0 1 1-7-7L11.5 3.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            </div>
+
+            <div class="compose-footer">
+              <div class="compose-icon-btn danger" onclick="discardComposeWindow(${w.id})">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9.5 7V5a1.5 1.5 0 0 1 1.5-1.5h2A1.5 1.5 0 0 1 14.5 5v2M6 7l1 12.5A2 2 0 0 0 9 21.3h6a2 2 0 0 0 2-1.8L18 7" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+              </div>
+              <div class="compose-send-btn" onclick="sendComposeWindow(${w.id})">
+                Send
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M3 11L20 4L13 21L11 13L3 11Z" fill="white"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function openCompose() {
+    composeWindows.push({ id: nextComposeId++, minimized: false, subject: '' });
+    renderComposeWindows();
+  }
+  function closeComposeWindow(id) {
+    composeWindows = composeWindows.filter(w => w.id !== id);
+    renderComposeWindows();
+  }
+  function toggleMinimizeCompose(id) {
+    const w = composeWindows.find(w => w.id === id);
+    if (w) w.minimized = !w.minimized;
+    renderComposeWindows();
+  }
+  function setComposeSubject(id, subject) {
+    const w = composeWindows.find(w => w.id === id);
+    if (w) w.subject = subject;
+    renderComposeWindows();
+  }
+  function discardComposeWindow(id) { closeComposeWindow(id); showToast('Draft discarded'); }
+  function sendComposeWindow(id) { closeComposeWindow(id); showToast('Message sent'); }
+
+  let toastTimer;
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    document.getElementById('toast-message').textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2400);
+  }
+
+  // ================== SIDEBAR PARTICLES (drift only, no mouse interaction) ==================
+  (function () {
+    const canvas = document.getElementById('sidebar-particles');
+    const ctx = canvas.getContext('2d');
+    let width = 0, height = 0, dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let particles = [];
+
+    function hexToRgb(hex) {
+      const h = hex.replace('#', '');
+      const n = parseInt(h, 16);
+      return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+    }
+    const c1 = hexToRgb('29A3E8'.replace('#',''));
+    const c2 = hexToRgb('8B5CF6'.replace('#',''));
+
+    function resize() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      width = rect.width; height = rect.height;
+      canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
+      canvas.style.width = rect.width + 'px'; canvas.style.height = rect.height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const area = width * height;
+      const count = Math.max(16, Math.min(Math.round(area / 4500), 40));
+      particles = Array.from({ length: count }, () => ({
+        x: Math.random() * width, y: Math.random() * height,
+        vx: (Math.random() - 0.5) * 0.16, vy: (Math.random() - 0.5) * 0.16,
+        r: Math.random() * 1.4 + 0.8,
+      }));
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    function tick() {
+      requestAnimationFrame(tick);
+      if (!width) return;
+      ctx.clearRect(0, 0, width, height);
+      for (const p of particles) {
+        p.x += p.vx; p.y += p.vy;
+        if (p.x < -8) p.x = width + 8; if (p.x > width + 8) p.x = -8;
+        if (p.y < -8) p.y = height + 8; if (p.y > height + 8) p.y = -8;
+      }
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const a = particles[i], b = particles[j];
+          const dx = a.x - b.x, dy = a.y - b.y;
+          const d2 = dx*dx + dy*dy;
+          if (d2 < 95*95) {
+            const alpha = (1 - Math.sqrt(d2) / 95) * 0.14;
+            ctx.strokeStyle = `rgba(${c1.r},${c1.g},${c1.b},${alpha})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+          }
+        }
+      }
+      particles.forEach((p, idx) => {
+        const c = idx % 2 === 0 ? c1 : c2;
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(${c.r},${c.g},${c.b},0.7)`;
+        ctx.shadowColor = `rgba(${c.r},${c.g},${c.b},0.8)`;
+        ctx.shadowBlur = 5;
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+        ctx.fill();
+      });
+      ctx.shadowBlur = 0;
+    }
+    requestAnimationFrame(tick);
+  })();
+
+  renderAll();
+</script>
+</body>
+</html>
