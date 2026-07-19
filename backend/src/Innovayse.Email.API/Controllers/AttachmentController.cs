@@ -3,12 +3,12 @@ namespace Innovayse.Email.API.Controllers;
 using Innovayse.Email.Application.Messages.Queries.GetAttachment;
 using Innovayse.Email.Application.Messages.Queries.GetMessage;
 using Innovayse.Email.Domain.Models;
-using Microsoft.AspNetCore.Authorization;
+using Innovayse.Email.API.Filters;
 using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
 [Route("api/attachments")]
-[Authorize]
+[ServiceFilter(typeof(RequireActiveMailboxFilter))]
 public sealed class AttachmentController(
     GetAttachmentHandler getAttachment,
     GetMessageHandler getMessage) : ControllerBase

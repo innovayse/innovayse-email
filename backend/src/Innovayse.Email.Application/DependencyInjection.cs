@@ -1,7 +1,7 @@
 namespace Innovayse.Email.Application;
 
+using Innovayse.Email.Application.Auth.Commands.Login;
 using Innovayse.Email.Application.Compose.Queries.GetTemplate;
-using Innovayse.Email.Application.Mailboxes.Queries.ListMailboxes;
 using Innovayse.Email.Application.Messages.Commands.DeleteMessage;
 using Innovayse.Email.Application.Messages.Commands.MarkAsRead;
 using Innovayse.Email.Application.Messages.Commands.MoveMessage;
@@ -21,7 +21,7 @@ public static class DependencyInjection
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
         services.AddScoped<MailboxSessionHolder>();
-        services.AddScoped<ListMailboxesHandler>();
+        services.AddScoped<LoginHandler>();
         services.AddScoped<ListMessagesHandler>();
         services.AddScoped<GetMessageHandler>();
         services.AddScoped<SearchMessagesHandler>();

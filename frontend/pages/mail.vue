@@ -97,6 +97,11 @@ function handleRefresh() {
   fetchMessages()
   fetchFolderCounts()
 }
+
+async function handleLogout() {
+  await $fetch('/api/auth/logout', { method: 'POST' })
+  await navigateTo('/login')
+}
 </script>
 
 <template>
@@ -118,6 +123,7 @@ function handleRefresh() {
         :quota="quotaData"
         @switch-folder="handleSwitchFolder"
         @compose="() => {}"
+        @logout="handleLogout"
       />
 
       <!-- ============ MAIN COLUMN ============ -->

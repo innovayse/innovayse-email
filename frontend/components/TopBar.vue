@@ -24,6 +24,8 @@ const dayDate = rest.join(', ')
     </div>
 
     <div class="topbar-icons">
+      <div id="inno-launcher-mount"></div>
+      <div id="inno-account-mount"></div>
       <!-- Calendar -->
       <button class="icon-btn" title="Calendar">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">

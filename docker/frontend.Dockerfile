@@ -4,6 +4,8 @@ COPY frontend/package.json frontend/yarn.lock ./
 RUN yarn install --frozen-lockfile
 COPY frontend/ .
 ENV NUXT_PROXY_TARGET=http://email-api:8080
+ARG NUXT_PUBLIC_MAIN_URL="http://app.local"
+ENV NUXT_PUBLIC_MAIN_URL=$NUXT_PUBLIC_MAIN_URL
 RUN yarn build
 
 FROM node:22-alpine

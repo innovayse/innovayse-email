@@ -5,24 +5,17 @@ export default defineEventHandler(async (event) => {
   const path = event.path
   const targetUrl = `${target}${path}`
 
-  // Build headers, forwarding all except host
+  // Build headers, forwarding all except hop-by-hop headers that undici's
+  // fetch() refuses to set manually (connection, content-length is recomputed
+  // from the forwarded body, etc.) — leaving these in throws UND_ERR_INVALID_ARG.
+  const HOP_BY_HOP_HEADERS = new Set([
+    'host', 'connection', 'keep-alive', 'transfer-encoding', 'upgrade', 'content-length'
+  ])
   const reqHeaders: Record<string, string> = {}
   const incomingHeaders = getRequestHeaders(event)
   for (const [key, value] of Object.entries(incomingHeaders)) {
-    if (key === 'host') continue
+    if (HOP_BY_HOP_HEADERS.has(key)) continue
     if (value) reqHeaders[key] = value as string
-  }
-
-  // Inject Bearer token from httpOnly auth_token cookie
-  const authToken = getCookie(event, 'auth_token')
-  if (authToken) {
-    reqHeaders['authorization'] = `Bearer ${authToken}`
-  }
-
-  // Inject active mailbox from cookie
-  const mailboxEmail = getCookie(event, 'innovayse_active_mailbox')
-  if (mailboxEmail) {
-    reqHeaders['x-mailbox-email'] = mailboxEmail
   }
 
   const method = getMethod(event)

@@ -7,21 +7,18 @@ services:
       - "4002:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - Sso__Authority=http://innovayse-sso-sso-api-1:8080
-      - Sso__ClientId=innovayse-email
-      - Hostpanel__ApiUrl=http://hostpanel-api-1:5148
       - Mailcow__ApiUrl=${MAILCOW_API_URL:-}
       - Mailcow__ApiKey=${MAILCOW_API_KEY:-}
-      - Imap__Host=${IMAP_HOST:-mail.innovayse.local}
+      - Imap__Host=${IMAP_HOST:-stage-mail.innovayse.com}
       - Imap__Port=${IMAP_PORT:-993}
       - Imap__UseSsl=true
-      - Smtp__Host=${SMTP_HOST:-mail.innovayse.local}
+      - Smtp__Host=${SMTP_HOST:-stage-mail.innovayse.com}
       - Smtp__Port=${SMTP_PORT:-587}
       - Smtp__UseSsl=true
-      - Cors__AllowedOrigins__0=http://localhost:4003
+      - Cors__AllowedOrigins__0=https://stage-mail.innovayse.com
       - "EncryptionKey=${ENCRYPTION_KEY:?ENCRYPTION_KEY must be set in .env, generate with openssl rand -base64 32}"
     extra_hosts:
-      - "mail.innovayse.local:host-gateway"
+      - "stage-mail.innovayse.com:host-gateway"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 10s
@@ -35,15 +32,14 @@ services:
     build:
       context: .
       dockerfile: docker/frontend.Dockerfile
+      args:
+        NUXT_PUBLIC_MAIN_URL: https://stage.innovayse.com
     ports:
       - "4003:3000"
     environment:
       - NUXT_API_PROXY_TARGET=http://email-api:8080
-      - NUXT_SSO_URL=http://innovayse-sso-sso-api-1:8080
-      - NUXT_PUBLIC_SSO_PUBLIC_URL=http://localhost:4001
-      - NUXT_SSO_CLIENT_ID=innovayse-email
-      - NUXT_SSO_CLIENT_SECRET=dev-secret-email
-      - NUXT_SSO_CALLBACK_URL=http://localhost:4003/auth/callback
+      - NUXT_PUBLIC_MAIN_URL=https://stage.innovayse.com
+      - SECURE_COOKIES=true
     depends_on:
       email-api:
         condition: service_healthy

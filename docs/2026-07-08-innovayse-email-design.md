@@ -1,3 +1,5 @@
+> **Superseded 2026-07-19:** the SSO + Hostpanel-mediated auth flow described below was replaced with direct email/password IMAP login. See `docs/2026-07-19-decouple-hostpanel-design.md`.
+
 # Innovayse Email — Webmail Client Design Spec
 
 ## Overview
