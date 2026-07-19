@@ -11,6 +11,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   switchFolder: [key: string]
   compose: []
+  logout: []
 }>()
 
 const { openCompose } = useCompose()
@@ -100,6 +101,11 @@ function handleCompose() {
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
           <circle cx="12" cy="12" r="2.8" stroke="currentColor" stroke-width="1.7"/>
           <path d="M19.4 13.5c.1-.5.1-1 0-1.5l1.9-1.5-2-3.4-2.3.7c-.4-.3-.8-.6-1.3-.8L15.3 4h-4l-.4 2.9c-.5.2-.9.5-1.3.8l-2.3-.7-2 3.4L7.2 12c-.1.5-.1 1 0 1.5l-1.9 1.5 2 3.4 2.3-.7c.4.3.8.6 1.3.8l.4 3h4l.4-2.9c.5-.2.9-.5 1.3-.8l2.3.7 2-3.4-1.9-1.6Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <button class="settings-btn" title="Log out" @click="emit('logout')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+          <path d="M15 17l5-5-5-5M20 12H9M12 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
     </div>

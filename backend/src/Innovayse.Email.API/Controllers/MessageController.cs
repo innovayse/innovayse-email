@@ -9,12 +9,12 @@ using Innovayse.Email.Application.Messages.Queries.GetMessage;
 using Innovayse.Email.Application.Messages.Queries.ListMessages;
 using Innovayse.Email.Application.Messages.Queries.SearchMessages;
 using Innovayse.Email.Domain.Models;
-using Microsoft.AspNetCore.Authorization;
+using Innovayse.Email.API.Filters;
 using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
 [Route("api/messages")]
-[Authorize]
+[ServiceFilter(typeof(RequireActiveMailboxFilter))]
 public sealed class MessageController(
     ListMessagesHandler listMessages,
     GetMessageHandler getMessage,

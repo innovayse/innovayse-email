@@ -1,3 +1,5 @@
+> **Superseded 2026-07-19:** Task 1 ("Hostpanel — Store Encrypted Mailbox Passwords + Credentials Endpoint") below was never implemented and is no longer needed. See `docs/2026-07-19-decouple-hostpanel-design.md`.
+
 # Innovayse Email — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.

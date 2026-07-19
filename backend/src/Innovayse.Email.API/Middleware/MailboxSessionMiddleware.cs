@@ -5,34 +5,23 @@ using Innovayse.Email.Domain.Interfaces;
 
 public sealed class MailboxSessionMiddleware(RequestDelegate next)
 {
+    private const string CookieName = "mail_session";
+
     public async Task InvokeAsync(
         HttpContext context,
         MailboxSessionHolder session,
-        IMailboxCredentialProvider credentialProvider)
+        ISessionCookieCodec cookieCodec)
     {
-        // Extract bearer token from Authorization header
-        var authHeader = context.Request.Headers.Authorization.FirstOrDefault();
-        var accessToken = authHeader?.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) == true
-            ? authHeader["Bearer ".Length..].Trim()
-            : null;
-
-        session.AccessToken = accessToken;
-
-        // Read desired mailbox from header
-        var mailboxEmail = context.Request.Headers["X-Mailbox-Email"].FirstOrDefault();
-
-        if (!string.IsNullOrEmpty(mailboxEmail) && !string.IsNullOrEmpty(accessToken))
+        if (context.Request.Cookies.TryGetValue(CookieName, out var cookieValue) && !string.IsNullOrEmpty(cookieValue))
         {
             try
             {
-                var mailboxes = await credentialProvider.GetMailboxesAsync(accessToken, context.RequestAborted);
-                session.ActiveMailbox = mailboxes.FirstOrDefault(
-                    m => m.Email.Equals(mailboxEmail, StringComparison.OrdinalIgnoreCase));
+                session.ActiveMailbox = cookieCodec.Decode(cookieValue);
             }
             catch
             {
-                // If we can't fetch credentials, proceed without setting active mailbox.
-                // Controllers will return 400/401 when they need it.
+                // Corrupt/tampered cookie — proceed unauthenticated; RequireActiveMailboxFilter gates access.
+                session.ActiveMailbox = null;
             }
         }
 

@@ -3,12 +3,12 @@ namespace Innovayse.Email.API.Controllers;
 using Innovayse.Email.Application.Compose.Queries.GetTemplate;
 using Innovayse.Email.Application.Messages.Commands.SaveDraft;
 using Innovayse.Email.Application.Messages.Commands.SendMessage;
-using Microsoft.AspNetCore.Authorization;
+using Innovayse.Email.API.Filters;
 using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
 [Route("api/compose")]
-[Authorize]
+[ServiceFilter(typeof(RequireActiveMailboxFilter))]
 public sealed class ComposeController(
     SendMessageHandler sendMessage,
     SaveDraftHandler saveDraft,

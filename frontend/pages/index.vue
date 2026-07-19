@@ -1,46 +1,14 @@
 <script setup lang="ts">
-// Entry point: check auth → check mailbox selection → redirect to /mail
-// In production, auth is via SSO JWT (cookie). Here we check for a valid token
-// by probing the /api/mailboxes endpoint; redirect to SSO login on 401.
+// Entry point: check for an active mailbox session → /mail, else → /login
 
-const { activeMailbox, fetchMailboxes } = useMailbox()
-
-const SSO_LOGIN_URL = '/auth/login'
-
-// Check auth cookie first — if not present, redirect to SSO immediately
-const authedCookie = useCookie('authed')
+const { fetchActiveMailbox } = useMailbox()
 
 onMounted(async () => {
-  if (!authedCookie.value) {
-    window.location.href = SSO_LOGIN_URL
-    return
-  }
-
   try {
-    const mailboxes = await fetchMailboxes()
-
-    if (mailboxes.length === 0) {
-      await navigateTo('/select-mailbox')
-      return
-    }
-
-    if (!activeMailbox.value) {
-      if (mailboxes.length === 1) {
-        activeMailbox.value = mailboxes[0]
-        await navigateTo('/mail')
-      } else {
-        await navigateTo('/select-mailbox')
-      }
-    } else {
-      await navigateTo('/mail')
-    }
-  } catch (e: any) {
-    const status = e?.status || e?.statusCode || e?.response?.status
-    if (status === 401) {
-      window.location.href = SSO_LOGIN_URL
-    } else {
-      await navigateTo('/select-mailbox')
-    }
+    await fetchActiveMailbox()
+    await navigateTo('/mail')
+  } catch {
+    await navigateTo('/login')
   }
 })
 </script>
