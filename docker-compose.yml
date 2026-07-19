@@ -19,7 +19,7 @@ services:
       - Smtp__Port=${SMTP_PORT:-587}
       - Smtp__UseSsl=true
       - Cors__AllowedOrigins__0=http://localhost:4003
-      - EncryptionKey=${ENCRYPTION_KEY:-Uf2LNuJEOIDuLW1GBXu75paqpCYnEXyCtPoCxOlelK0=}
+      - "EncryptionKey=${ENCRYPTION_KEY:?ENCRYPTION_KEY must be set in .env, generate with openssl rand -base64 32}"
     extra_hosts:
       - "mail.innovayse.local:host-gateway"
     healthcheck:
