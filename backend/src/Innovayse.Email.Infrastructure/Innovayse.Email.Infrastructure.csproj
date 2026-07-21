@@ -9,7 +9,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="MailKit" Version="4.*" />
-    <PackageReference Include="Microsoft.Extensions.Http" Version="9.*" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.*" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.*" />
     <ProjectReference Include="..\Innovayse.Email.Application\Innovayse.Email.Application.csproj" />
   </ItemGroup>
